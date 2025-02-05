@@ -127,10 +127,9 @@ class TCPConnectionProcess(Scene):
         self.add_state("第一次握手: SYN ←")
         syn_packet = self.create_packet("SYN", client)
         self.play(syn_packet.animate.scale(0.3).next_to(server_kernel.port.circle, LEFT, buff=0.15))
-        self.play(FadeOut(syn_packet))
-
         conn = Connection("SYN-RECVD#1", 0.5, 1, BLUE, 10).move_to(server_kernel.syn_queue.get_bottom() + UP * 0.5)
         self.play(
+            FadeOut(syn_packet), 
             Create(conn)
         )
 
