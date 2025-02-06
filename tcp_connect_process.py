@@ -56,13 +56,12 @@ class ListeningKernel(VGroup):
             Create(self.port)
         )
 
-
 class ServerProc(VGroup):
     def __init__(self, height, width, color, **kwargs):
         super().__init__(**kwargs)
 
         self.rect = Rectangle(height=height, width=width, color=color)
-        self.text = Text("Server").next_to(self.rect, UP)
+        self.text = Text("Server").next_to(self.rect, DOWN)
         self.add(self.rect, self.text)
 
     def animate_creation(self):
@@ -93,6 +92,15 @@ class Connection(VGroup):
         self.text = Text(text, font_size=font_size).move_to(self.rect)
         self.add(self.rect, self.text)
 
+class EventLoop(VGroup):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.rect = Rectangle(height=height, width=width, color=color)
+    
+    def create_channel(self):
+        channel = LabeledDot(Tex("FD", color=BLACK)).scale(0.3)
+        return channel
+
 class TCPConnectionProcess(Scene):
     state_text = Text("", font_size=24).to_edge(UP)
 
@@ -108,8 +116,8 @@ class TCPConnectionProcess(Scene):
     def construct(self):
         self.add_state("监听端口8088")
 
-        server_proc = ServerProc(1, 4, WHITE)
-        server_kernel = ListeningKernel("8088", 6, 4).next_to(server_proc, DOWN)
+        server_proc = ServerProc(2, 4, WHITE)
+        server_kernel = ListeningKernel("8088", 4, 4).next_to(server_proc, DOWN)
 
         VGroup(
             server_proc,
@@ -122,6 +130,12 @@ class TCPConnectionProcess(Scene):
             server_kernel.animate_creation(),
             server_proc.animate_creation(),
             client.animate_creation(),
+        )
+
+        bind_fd = LabeledDot(Tex("FD", color=BLACK)).move_to(server_kernel.port.circle.get_center()).scale(0.3)
+        self.add(bind_fd)
+        self.play(
+            bind_fd.animate.move_to(server_proc.rect.get_center() + UP * 0.5),
         )
 
         self.add_state("第一次握手: SYN ←")
