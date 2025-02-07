@@ -84,6 +84,43 @@ class Client(VGroup):
             Write(self.text),
         )
 
+class EventLoop(VGroup):
+    def __init__(self, height, width, color, channels = [], **kwargs):
+        super().__init__(**kwargs)
+        self.height = height
+        self.width = width
+        self.color = color
+        self.rect = Rectangle(height=height, width=width, color=color)
+
+        if channels is None or len(channels) == 0:
+            self.channels = []
+            self.table = self.new_table([[Text("")]])
+        else:
+            self.channels = channels
+            self.table = self.new_table([self.channels])
+
+        self.add(
+            self.rect,
+            self.table
+        )
+    
+    def create_channel(self, text, scene):
+        channel = LabeledDot(text).scale(0.3)
+        self.channels.append(channel)
+        new_loop = EventLoop(self.height, self.width, self.color, self.channels)
+        scene.play(
+            Transform(self, new_loop)
+        )
+    
+    def new_table(self, elements):
+        return MobjectTable(
+            elements,
+            # include_outer_lines=True,
+            # line_config={"stroke_color": WHITE, "stroke_width": 2},
+            # # 设置单元格尺寸，确保边框可见
+            # cell_padding=0.6
+        )
+
 class Connection(VGroup):
     def __init__(self, text, height, width, color, font_size, **kwargs):
         super().__init__(**kwargs)
@@ -92,26 +129,10 @@ class Connection(VGroup):
         self.text = Text(text, font_size=font_size).move_to(self.rect)
         self.add(self.rect, self.text)
 
-class EventLoop(VGroup):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.rect = Rectangle(height=height, width=width, color=color)
-    
-    def create_channel(self):
-        channel = LabeledDot(Tex("FD", color=BLACK)).scale(0.3)
-        return channel
-
 class TCPConnectionProcess(Scene):
     state_text = Text("", font_size=24).to_edge(UP)
 
     server_proc = None
-
-    def create_server_proc(self):
-        server = Rectangle(height=2, width=4, color=BLUE).to_edge(LEFT)
-        server_text = Text("Server Proc").next_to(server, DOWN)
-        self.server_proc = VGroup(
-            server, server_text
-        )
 
     def construct(self):
         self.add_state("监听端口8088")
@@ -132,11 +153,16 @@ class TCPConnectionProcess(Scene):
             client.animate_creation(),
         )
 
-        bind_fd = LabeledDot(Tex("FD", color=BLACK)).move_to(server_kernel.port.circle.get_center()).scale(0.3)
-        self.add(bind_fd)
-        self.play(
-            bind_fd.animate.move_to(server_proc.rect.get_center() + UP * 0.5),
-        )
+        event_loop = EventLoop(4, 4, WHITE)
+        self.add(event_loop)
+
+        event_loop.create_channel("FD0", self)
+
+        # bind_fd = LabeledDot(Tex("FD", color=BLACK)).move_to(server_kernel.port.circle.get_center()).scale(0.3)
+        # self.add(bind_fd)
+        # self.play(
+        #     bind_fd.animate.move_to(server_proc.rect.get_center() + UP * 0.5),
+        # )
 
         self.add_state("第一次握手: SYN ←")
         syn_packet = self.create_packet("SYN", client)
@@ -160,6 +186,7 @@ class TCPConnectionProcess(Scene):
         acc_conn = Connection("ESTABLISHED", 0.5, 1, GREEN, 10).move_to(conn)
         self.play(ReplacementTransform(conn, acc_conn))
         self.play(acc_conn.animate.move_to(server_kernel.acc_queue.queue.get_top() + DOWN * 0.5))
+        event_loop.create_channel("FD1", self)
 
         self.wait(5)
 
